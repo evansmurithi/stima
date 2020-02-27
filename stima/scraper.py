@@ -67,7 +67,7 @@ def download_pdf(url):
     return pdf_filename, pdf_file_temp
 
 
-def scrape_interruption_titles(url=None):
+def scrape_interruptions(url=None):
     """
     Scrape power interruption titles and PDF links from KPLC website.
     Params:
@@ -85,7 +85,7 @@ def scrape_interruption_titles(url=None):
         content = make_request(url)
     except RequestError as error:
         print("Error: {}".format(error))
-        return None
+        raise
 
     # parse content
     soup = BeautifulSoup(content, "html.parser")
@@ -100,10 +100,10 @@ def scrape_interruption_titles(url=None):
         "ul", class_="pagination").find("a", attrs={"rel": "next"})
     if isinstance(a_tag, Tag):
         next_url = a_tag.get("href")
-        yield from scrape_interruption_titles(next_url)
+        yield from scrape_interruptions(next_url)
 
 
-def scrape_interruption_pdf_files(url):
+def scrape_interruption_attachments(url):
     """
     Scrape power interruption link and download PDF containing interruption
     details.
@@ -124,10 +124,9 @@ def scrape_interruption_pdf_files(url):
     """
     try:
         content = make_request(url)
-    except Exception:
-        LOGGER.error(
-            "Error making request", exc_info=True, extra={"url": url})
-        return None
+    except RequestError as error:
+        print("Error: {}".format(error))
+        raise
 
     # parse content
     soup = BeautifulSoup(content, "html.parser")
@@ -151,7 +150,7 @@ def scrape_interruption_pdf_files(url):
             pdf_filename, pdf_file_temp = download_pdf(download_link)
         except (RequestError, WrongContentType) as error:
             print("Error: {}".format(error))
-            return None
+            continue
 
         yield {
             "parent_link": url,
